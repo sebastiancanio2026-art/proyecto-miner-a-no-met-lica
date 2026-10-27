@@ -1,44 +1,15 @@
 import pandas as pd
 
-def calcular_metricas(df):
-    """
-    Ordena los datos y calcula métricas clave por mineral.
-    """
-    df = df.sort_values(["Mineral", "Año"]).reset_index(drop=True)
-
-    resumen = (
-        df.groupby("Mineral")
-        .agg(
-            Inicio_Produccion=("Produccion", "first"),
-            Fin_Produccion=("Produccion", "last"),
-            Inicio_Exportacion=("Exportacion", "first"),
-            Fin_Exportacion=("Exportacion", "last"),
-            Inicio_Valor=("Valor_Economico", "first"),
-            Fin_Valor=("Valor_Economico", "last"),
-            Años=("Año", "nunique")
-        )
-        .reset_index()
-    )
-
-    def crecimiento(inicial, final):
-        if pd.isna(inicial) or inicial == 0:
-            return 0.0
-        return ((final - inicial) / inicial) * 100
-
-    resumen["Crecimiento_Produccion"] = resumen.apply(
-        lambda row: crecimiento(row["Inicio_Produccion"], row["Fin_Produccion"]), axis=1
-    )
-    resumen["Crecimiento_Exportacion"] = resumen.apply(
-        lambda row: crecimiento(row["Inicio_Exportacion"], row["Fin_Exportacion"]), axis=1
-    )
-    resumen["Crecimiento_Valor"] = resumen.apply(
-        lambda row: crecimiento(row["Inicio_Valor"], row["Fin_Valor"]), axis=1
-    )
-
-    resumen["Potencial_Crecimiento"] = (
-        resumen["Crecimiento_Produccion"] * 0.5
-        + resumen["Crecimiento_Exportacion"] * 0.3
-        + resumen["Crecimiento_Valor"] * 0.2
-    )
-
-    return resumen
+def transformar_a_formato_largo(df, id_col='PRODUCTO', var_name='AÑO', value_name='VALOR'):
+    if df is None:
+        return None
+    
+    # Seleccionar columnas de años
+    anios_cols = [col for col in df.columns if col != id_col]
+    
+    df_long = pd.melt(df, id_vars=[id_col], value_vars=anios_cols, 
+                      var_name=var_name, value_name=value_name)
+    
+    df_long[var_name] = pd.to_numeric(df_long[var_name], errors='coerce')
+    df_long = df_long.dropna(subset=[var_name, value_name])
+    return df_long
